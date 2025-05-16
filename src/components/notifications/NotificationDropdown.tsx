@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -22,7 +22,7 @@ export default function NotificationDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!session?.user) return;
     
     setIsLoading(true);
@@ -39,7 +39,7 @@ export default function NotificationDropdown() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session?.user]);
 
   // Mark notifications as read
   const markAsRead = async (notificationIds?: string[]) => {
@@ -100,7 +100,7 @@ export default function NotificationDropdown() {
     if (session?.user) {
       fetchNotifications();
     }
-  }, [session?.user]);
+  }, [session?.user, fetchNotifications]);
 
   // Format date
   const formatDate = (dateString: string) => {

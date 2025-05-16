@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 
 interface SearchBarProps {
   initialQuery?: string;
@@ -18,7 +17,6 @@ export default function SearchBar({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   // Filter suggestions based on query
   useEffect(() => {

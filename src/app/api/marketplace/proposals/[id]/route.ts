@@ -2,7 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { notificationService } from '@/lib/services/notificationService';
-import { ProposalStatus, RequestStatus, TransactionStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
+type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+type RequestStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+type TransactionStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+
+interface ServiceProposal {
+  id: string;
+  description: string;
+  price: string;
+  deliveryTime: string;
+  status: ProposalStatus;
+  requestId: string;
+  providerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  request: {
+    requestedById: string;
+    status: RequestStatus;
+    title: string;
+  };
+  transaction?: {
+    id: string;
+    status: TransactionStatus;
+  } | null;
+}
 
 /**
  * GET: Fetch a specific proposal by ID
@@ -86,7 +111,8 @@ export async function GET(
     });
 
     const totalRatings = providerRatings.reduce(
-      (sum, transaction) => sum + (transaction.clientRating || 0),
+      (sum: number, transaction: { clientRating: number | null }) => 
+        sum + (transaction.clientRating || 0),
       0
     );
     const averageRating = providerRatings.length > 0
@@ -149,9 +175,19 @@ export async function PUT(
         request: {
           select: {
             requestedById: true,
-            status: true
+            status: true,
+            title: true
           }
-        }
+        },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            bio: true
+          }
+        },
+        transaction: true
       }
     });
 
@@ -203,15 +239,15 @@ export async function PUT(
       });
 
       // Start a transaction to ensure data consistency
-      const result = await prisma.$transaction(async (prisma) => {
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Update proposal status
-        const updatedProposal = await prisma.serviceProposal.update({
+        const updatedProposal = await tx.serviceProposal.update({
           where: { id },
           data: { status: status as ProposalStatus }
         });
 
         // Create a service transaction
-        const transaction = await prisma.serviceTransaction.create({
+        const transaction = await tx.serviceTransaction.create({
           data: {
             amount: proposal.price,
             status: 'PENDING' as TransactionStatus,
@@ -228,13 +264,13 @@ export async function PUT(
         });
 
         // Update service request status to IN_PROGRESS
-        await prisma.serviceRequest.update({
+        await tx.serviceRequest.update({
           where: { id: proposal.requestId },
           data: { status: 'IN_PROGRESS' as RequestStatus }
         });
 
         // Reject all other proposals for this request
-        await prisma.serviceProposal.updateMany({
+        await tx.serviceProposal.updateMany({
           where: {
             requestId: proposal.requestId,
             id: { not: proposal.id },
@@ -256,11 +292,7 @@ export async function PUT(
         providerId: proposal.providerId
       });
 
-      return NextResponse.json({
-        proposal: result.updatedProposal,
-        transaction: result.transaction,
-        message: 'Proposal accepted and transaction created'
-      });
+      return NextResponse.json(result);
     } else {
       // Get user info for notifications
       const client = await prisma.user.findUnique({
@@ -273,7 +305,7 @@ export async function PUT(
         select: { id: true, name: true }
       });
 
-      // Simple status update for other cases
+      // For other status updates, just update the proposal
       const updatedProposal = await prisma.serviceProposal.update({
         where: { id },
         data: { status: status as ProposalStatus }
@@ -304,14 +336,29 @@ export async function PUT(
           proposalId: proposal.id,
           clientId: client?.id || proposal.request.requestedById,
           clientName: client?.name || 'The client',
-          providerId: proposal.providerId
+          providerId: provider?.id || proposal.providerId
         });
       }
 
-      return NextResponse.json({
-        proposal: updatedProposal,
-        message: `Proposal ${status.toLowerCase()} successfully`
-      });
+      // If marking as completed, notify about transaction status change
+      if (status === 'COMPLETED' && proposal.transaction) {
+        const actor = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true }
+        });
+
+        await notificationService.notifyTransactionStatusChange({
+          transactionId: proposal.transaction.id,
+          status: 'COMPLETED',
+          requestTitle: proposal.request.title,
+          clientId: proposal.request.requestedById,
+          providerId: proposal.providerId,
+          actorId: session.user.id,
+          actorName: actor?.name || 'The provider'
+        });
+      }
+
+      return NextResponse.json(updatedProposal);
     }
   } catch (error) {
     console.error('Error updating proposal:', error);

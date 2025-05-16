@@ -1,5 +1,17 @@
 import { prisma } from '@/lib/prisma';
 
+type NotificationData = {
+  requestId?: string;
+  proposalId?: string;
+  providerId?: string;
+  clientId?: string;
+  category?: string;
+  transactionId?: string;
+  status?: string;
+  rating?: number;
+  reviewerId?: string;
+};
+
 /**
  * Service for creating and managing notifications
  */
@@ -12,7 +24,7 @@ export const notificationService = {
     type: string;
     title: string;
     message: string;
-    data?: Record<string, any>;
+    data?: NotificationData;
   }) {
     const { userId, type, title, message, data } = params;
 

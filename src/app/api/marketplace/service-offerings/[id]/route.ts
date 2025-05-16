@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import { RequestStatus, TransactionStatus } from '@prisma/client';
+
+type TransactionStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+interface Transaction {
+  id: string;
+  clientRating: number | null;
+  clientReview: string | null;
+  completedAt: Date | null;
+  client: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+}
 
 /**
  * GET: Fetch a specific service offering by ID
@@ -56,7 +69,8 @@ export async function GET(
     });
 
     const totalRatings = providerRatings.reduce(
-      (sum, transaction) => sum + (transaction.clientRating || 0),
+      (sum: number, transaction: { clientRating: number | null }) => 
+        sum + (transaction.clientRating || 0),
       0
     );
     const averageRating = providerRatings.length > 0
@@ -85,7 +99,7 @@ export async function GET(
       take: 10
     });
 
-    const formattedReviews = reviews.map(review => ({
+    const formattedReviews = reviews.map((review: Transaction) => ({
       id: review.id,
       rating: review.clientRating,
       comment: review.clientReview,

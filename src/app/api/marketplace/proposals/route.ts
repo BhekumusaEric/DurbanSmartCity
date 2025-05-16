@@ -2,7 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { notificationService } from '@/lib/services/notificationService';
-import { ProposalStatus } from '@prisma/client';
+
+type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+
+interface ServiceProposal {
+  id: string;
+  requestId: string;
+  providerId: string;
+  description: string;
+  price: string;
+  deliveryTime: string;
+  status: ProposalStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  request: {
+    id: string;
+    title: string;
+    requestedById: string;
+  };
+  provider: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+}
+
+interface EnhancedProvider {
+  id: string;
+  name: string | null;
+  image: string | null;
+  rating: number;
+  completedServices: number;
+}
+
+interface EnhancedProposal extends Omit<ServiceProposal, 'provider'> {
+  provider: EnhancedProvider;
+}
 
 /**
  * GET: Fetch proposals with optional filtering
@@ -27,7 +62,11 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause based on filters
-    const where: any = {};
+    const where: {
+      requestId?: string;
+      providerId?: string;
+      status?: ProposalStatus;
+    } = {};
 
     if (requestId) {
       where.requestId = requestId;
@@ -38,7 +77,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as ProposalStatus;
     }
 
     // Fetch proposals
@@ -71,7 +110,7 @@ export async function GET(req: NextRequest) {
     const totalCount = await prisma.serviceProposal.count({ where });
 
     // Filter proposals based on user role
-    const filteredProposals = proposals.filter(proposal => {
+    const filteredProposals = proposals.filter((proposal: ServiceProposal) => {
       // User can see proposals if they are the provider or the request owner
       return proposal.providerId === session.user.id ||
              proposal.request.requestedById === session.user.id;
@@ -79,7 +118,7 @@ export async function GET(req: NextRequest) {
 
     // Get provider ratings and completed services count
     const enhancedProposals = await Promise.all(
-      filteredProposals.map(async (proposal) => {
+      filteredProposals.map(async (proposal: ServiceProposal) => {
         // Count completed transactions for this provider
         const completedServicesCount = await prisma.serviceTransaction.count({
           where: {
@@ -100,7 +139,8 @@ export async function GET(req: NextRequest) {
         });
 
         const totalRatings = providerRatings.reduce(
-          (sum, transaction) => sum + (transaction.clientRating || 0),
+          (sum: number, transaction: { clientRating: number | null }) => 
+            sum + (transaction.clientRating || 0),
           0
         );
         const averageRating = providerRatings.length > 0
@@ -114,7 +154,7 @@ export async function GET(req: NextRequest) {
             rating: parseFloat(averageRating.toFixed(1)),
             completedServices: completedServicesCount
           }
-        };
+        } as EnhancedProposal;
       })
     );
 
