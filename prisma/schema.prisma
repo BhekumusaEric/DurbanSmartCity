@@ -1,0 +1,396 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(LEARNER)
+  bio           String?
+  location      String?
+  skills        String?
+  points        Int       @default(0)
+  badges        Badge[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  enrolledCourses    Enrollment[]
+  completedModules   CompletedModule[]
+  createdCourses     Course[]         @relation("CourseCreator")
+  portfolio          Portfolio?
+  postedJobs         Job[]
+  applications       JobApplication[]
+  mentorships        Mentorship[]     @relation("Mentor")
+  mentees            Mentorship[]     @relation("Mentee")
+  forumPosts         ForumPost[]
+  forumComments      ForumComment[]
+  achievements       Achievement[]
+  apiKeys            ApiKey[]
+
+  // Service marketplace relations
+  serviceRequests    ServiceRequest[]
+  serviceOfferings   ServiceOffering[]
+  proposals          ServiceProposal[]
+  clientTransactions ServiceTransaction[] @relation("Client")
+  providerTransactions ServiceTransaction[] @relation("Provider")
+
+  // Notifications
+  notifications      Notification[]
+}
+
+enum UserRole {
+  LEARNER
+  MENTOR
+  EMPLOYER
+  ADMIN
+}
+
+// Learning platform models
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  level       String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator       User          @relation("CourseCreator", fields: [creatorId], references: [id])
+  creatorId     String
+  modules       Module[]
+  enrollments   Enrollment[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  content     String
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course          Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId        String
+  completedBy     CompletedModule[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String
+  progress  Float    @default(0)
+
+  @@unique([userId, courseId])
+}
+
+model CompletedModule {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId  String
+
+  @@unique([userId, moduleId])
+}
+
+// Portfolio & Marketplace models
+model Portfolio {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String   @unique
+  projects    Project[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  projectUrl  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolioId String
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  company     String?
+  location    String?
+  type        JobType
+  skills      String?
+  salary      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  postedBy      User            @relation(fields: [postedById], references: [id])
+  postedById    String
+  applications  JobApplication[]
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+model JobApplication {
+  id          String   @id @default(cuid())
+  coverLetter String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId       String
+  applicant   User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId String
+
+  @@unique([jobId, applicantId])
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+}
+
+// Community features models
+model Mentorship {
+  id          String   @id @default(cuid())
+  status      MentorshipStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  mentor      User     @relation("Mentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentorId    String
+  mentee      User     @relation("Mentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  menteeId    String
+
+  @@unique([mentorId, menteeId])
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DECLINED
+}
+
+model ForumPost {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  comments    ForumComment[]
+}
+
+model ForumComment {
+  id          String   @id @default(cuid())
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  post        ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+}
+
+// Gamification models
+model Badge {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  imageUrl    String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  users       User[]
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  type        String
+  value       Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+}
+
+// Admin models
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  type        String    // "OPENAI" or "CUSTOM"
+  isActive    Boolean   @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+}
+
+// Service Marketplace models
+model ServiceRequest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  budget      String?
+  deadline    DateTime?
+  status      RequestStatus @default(OPEN)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  requestedBy   User     @relation(fields: [requestedById], references: [id])
+  requestedById String
+  proposals     ServiceProposal[]
+}
+
+enum RequestStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model ServiceOffering {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  price       String
+  deliveryTime String
+  features    String?  // Stored as pipe-separated values
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  provider    User     @relation(fields: [providerId], references: [id])
+  providerId  String
+}
+
+model ServiceProposal {
+  id          String   @id @default(cuid())
+  description String
+  price       String
+  deliveryTime String
+  status      ProposalStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId   String
+  provider    User     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId  String
+  transaction ServiceTransaction?
+
+  @@unique([requestId, providerId])
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+model ServiceTransaction {
+  id          String   @id @default(cuid())
+  amount      String
+  status      TransactionStatus @default(PENDING)
+  clientRating Int?
+  providerRating Int?
+  clientReview String?
+  providerReview String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  client      User     @relation("Client", fields: [clientId], references: [id])
+  clientId    String
+  provider    User     @relation("Provider", fields: [providerId], references: [id])
+  providerId  String
+  proposal    ServiceProposal @relation(fields: [proposalId], references: [id])
+  proposalId  String   @unique
+}
+
+enum TransactionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+// Notification model
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   // e.g., "NEW_PROPOSAL", "PROPOSAL_ACCEPTED", "TRANSACTION_COMPLETED"
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  data        String?  // JSON string with additional data
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+}
