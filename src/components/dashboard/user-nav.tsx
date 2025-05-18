@@ -9,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuGroup,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,12 +16,12 @@ import {
   User,
   Settings,
   LogOut,
-  Bell,
   Award,
   BookOpen,
   Briefcase,
   Code
 } from "lucide-react"
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 
 interface UserNavProps {
   user: {
@@ -35,12 +34,7 @@ interface UserNavProps {
 export function UserNav({ user }: UserNavProps) {
   return (
     <div className="flex items-center gap-4">
-      <Button variant="outline" size="icon" className="relative">
-        <Bell className="h-4 w-4" />
-        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-600 text-[10px] font-medium text-white flex items-center justify-center">
-          3
-        </span>
-      </Button>
+      <NotificationDropdown />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

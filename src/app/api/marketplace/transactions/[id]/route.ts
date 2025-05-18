@@ -132,7 +132,15 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: {
+      status?: TransactionStatus;
+      completedAt?: Date;
+      clientRating?: number;
+      clientReview?: string;
+      providerRating?: number;
+      providerReview?: string;
+      deliveryMessage?: string;
+    } = {};
 
     // Handle status update
     if (status) {

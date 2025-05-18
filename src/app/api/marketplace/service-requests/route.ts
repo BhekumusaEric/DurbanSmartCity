@@ -18,7 +18,16 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause based on filters
-    const where: any = {};
+    const where: {
+      category?: string;
+      status?: string;
+      requestedById?: string;
+      OR?: Array<{
+        title: { contains: string; mode: 'insensitive' };
+      } | {
+        description: { contains: string; mode: 'insensitive' };
+      }>;
+    } = {};
 
     if (category && category !== 'all') {
       where.category = category;

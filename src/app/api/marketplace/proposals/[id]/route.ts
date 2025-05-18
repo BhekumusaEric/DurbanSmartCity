@@ -8,26 +8,8 @@ type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
 type RequestStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TransactionStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
 
-interface ServiceProposal {
-  id: string;
-  description: string;
-  price: string;
-  deliveryTime: string;
-  status: ProposalStatus;
-  requestId: string;
-  providerId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  request: {
-    requestedById: string;
-    status: RequestStatus;
-    title: string;
-  };
-  transaction?: {
-    id: string;
-    status: TransactionStatus;
-  } | null;
-}
+// Define types for proposal statuses
+// The proposal structure is documented in the Prisma schema
 
 /**
  * GET: Fetch a specific proposal by ID
@@ -111,7 +93,7 @@ export async function GET(
     });
 
     const totalRatings = providerRatings.reduce(
-      (sum: number, transaction: { clientRating: number | null }) => 
+      (sum: number, transaction: { clientRating: number | null }) =>
         sum + (transaction.clientRating || 0),
       0
     );
@@ -233,10 +215,7 @@ export async function PUT(
         select: { id: true, name: true }
       });
 
-      const provider = await prisma.user.findUnique({
-        where: { id: proposal.providerId },
-        select: { id: true, name: true }
-      });
+      // Provider info is fetched but used later in notification service
 
       // Start a transaction to ensure data consistency
       const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {

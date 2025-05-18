@@ -17,7 +17,16 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause based on filters
-    const where: any = {
+    const where: {
+      isActive: boolean;
+      category?: string;
+      providerId?: string;
+      OR?: Array<{
+        title: { contains: string; mode: 'insensitive' };
+      } | {
+        description: { contains: string; mode: 'insensitive' };
+      }>;
+    } = {
       isActive: true
     };
 

@@ -24,8 +24,17 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause based on filters
-    const where: any = {};
-    
+    const where: {
+      clientId?: string;
+      providerId?: string;
+      status?: string;
+      OR?: Array<{
+        clientId: string;
+      } | {
+        providerId: string;
+      }>;
+    } = {};
+
     // Filter by user role
     if (role === 'client') {
       where.clientId = session.user.id;
@@ -38,7 +47,7 @@ export async function GET(req: NextRequest) {
         { providerId: session.user.id }
       ];
     }
-    
+
     // Filter by status
     if (status && status !== 'all') {
       where.status = status;

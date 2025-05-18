@@ -1,4 +1,4 @@
-import Image from "next/image";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,7 @@ export default function Home() {
               <span className="block mt-2 text-white/90">Learn, Build, Earn</span>
             </h1>
             <p className="text-xl opacity-90 max-w-lg">
-              A digital platform empowering Durban's youth with tech skills, job opportunities,
+              A digital platform empowering Durban&apos;s youth with tech skills, job opportunities,
               and a supportive community to build the future.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -175,7 +175,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 animate-pulse-slow">Ready to Start Your Journey?</h2>
             <p className="text-xl opacity-90 max-w-2xl mx-auto mb-8">
-              Join thousands of learners building their future in Durban's digital economy.
+              Join thousands of learners building their future in Durban&apos;s digital economy.
             </p>
             <Link href="/sign-up">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -200,7 +200,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold">Durban Smart City</h3>
               </div>
               <p className="text-gray-400">
-                Empowering Durban's youth with digital skills and opportunities.
+                Empowering Durban&apos;s youth with digital skills and opportunities.
               </p>
               <div className="flex gap-4 mt-6">
                 <a href="#" className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-blue-600 transition-colors">

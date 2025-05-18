@@ -42,6 +42,7 @@ export function SignUpForm() {
     setIsLoading(true)
 
     try {
+      // Step 1: Register the user
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -51,9 +52,16 @@ export function SignUpForm() {
       })
 
       if (!response.ok) {
-        throw new Error("Registration failed")
+        // Try to get more detailed error from the response
+        const errorData = await response.json().catch(() => null);
+        if (errorData?.error === "User already exists") {
+          throw new Error("A user with this email already exists");
+        } else {
+          throw new Error("Registration failed. Please try again.");
+        }
       }
 
+      // Step 2: Sign in the user with the new credentials
       const signInResult = await signIn("credentials", {
         email: data.email.toLowerCase(),
         password: data.password,
@@ -61,11 +69,18 @@ export function SignUpForm() {
       })
 
       if (!signInResult?.ok) {
-        throw new Error("Sign in failed")
+        throw new Error("Account created but sign in failed. Please try signing in manually.");
       }
 
-      router.refresh()
-      router.push("/dashboard")
+      // Step 3: Redirect to dashboard
+      toast.success("Account created successfully!");
+
+      // Use setTimeout to ensure the toast is visible before redirecting
+      setTimeout(() => {
+        router.refresh();
+        router.push("/dashboard");
+      }, 1000);
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again."
       toast.error(errorMessage)
@@ -137,4 +152,4 @@ export function SignUpForm() {
       </form>
     </div>
   )
-} 
+}
